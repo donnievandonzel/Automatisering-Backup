@@ -1,3 +1,13 @@
+# Logbestand pad instellen
+$logFile = "C:\Pad\Naar\kopieerlog.txt"
+
+# Functie voor het schrijven naar logbestand
+function Write-Log {
+    param([string]$message)
+    $timestamp = Get-Date -Format 'yyyy-MM-dd HH:mm:ss'
+    Add-Content -Path $logFile -Value "$timestamp - $message"
+}
+
 # Defineer de bron- en doelpaden
 $sourcePath = "\\fonteynfs.file.core.windows.net\fileserver"
 $destinationPath = "\\WIN-JPAKIKNKJ0L\Backup\"
@@ -13,22 +23,32 @@ if (!$sourcePath.EndsWith("\")) {
 if ($useRobocopy) {
     # Gebruik Robocopy voor kopiëren
     Write-Host "Gebruik van Robocopy..."
-    robocopy $sourcePath $destinationPath /E /Z /COPYALL /R:3 /W:5
-    Write-Host "Robocopy voltooid."
+    Write-Log "Start Robocopy van '$sourcePath' naar '$destinationPath'"
+    try {
+        robocopy $sourcePath $destinationPath /E /Z /COPYALL /R:3 /W:5 /LOG+:$logFile
+        Write-Host "Robocopy voltooid."
+        Write-Log "Robocopy voltooid."
+    } catch {
+        Write-Warning "Fout tijdens Robocopy: $_"
+        Write-Log "Fout tijdens Robocopy: $_"
+    }
 } else {
     # Origineel script voor kopiëren via PowerShell
 
     # Controleer of de bronmap bestaat
     if (!(Test-Path -Path $sourcePath)) {
         Write-Warning "De bronmap bestaat niet: $sourcePath. Het script gaat verder zonder kopiëren."
+        Write-Log "De bronmap bestaat niet: $sourcePath"
     } else {
         # Controleer of de doelmap bestaat, maak deze aan indien nodig
         if (!(Test-Path -Path $destinationPath)) {
             try {
                 New-Item -ItemType Directory -Path $destinationPath -Force | Out-Null
                 Write-Host "Doelmap aangemaakt: $destinationPath"
+                Write-Log "Doelmap aangemaakt: $destinationPath"
             } catch {
                 Write-Warning "Kan de doelmap niet aanmaken: $_"
+                Write-Log "Kan de doelmap niet aanmaken: $_"
             }
         }
 
@@ -36,9 +56,11 @@ if ($useRobocopy) {
         try {
             # Get alle items in de bronmap, inclusief submappen
             $items = Get-ChildItem -Path $sourcePath -Recurse -Force
+            Write-Log "Gevonden $(($items | Measure-Object).Count) items om te kopiëren."
         } catch {
             Write-Warning "Fout bij het ophalen van items uit de bronmap: $_"
-            $items = @()  # Zet $items leeg om verdere fouten te voorkomen
+            Write-Log "Fout bij het ophalen van items uit de bronmap: $_"
+            $items = @()  # Leeg maken om verder fouten te voorkomen
         }
 
         foreach ($item in $items) {
@@ -54,8 +76,10 @@ if ($useRobocopy) {
                     if (!(Test-Path -Path $destItemPath)) {
                         try {
                             New-Item -ItemType Directory -Path $destItemPath -Force | Out-Null
+                            Write-Log "Map aangemaakt: $destItemPath"
                         } catch {
                             Write-Warning "Kan map niet aanmaken: $destItemPath. $_"
+                            Write-Log "Kan map niet aanmaken: $destItemPath. $_"
                         }
                     }
                 } else {
@@ -65,22 +89,28 @@ if ($useRobocopy) {
                     if (!(Test-Path -Path $destDir)) {
                         try {
                             New-Item -ItemType Directory -Path $destDir -Force | Out-Null
+                            Write-Log "Doelmap aangemaakt voor bestand: $destDir"
                         } catch {
                             Write-Warning "Kan doelmap niet aanmaken: $destDir. $_"
+                            Write-Log "Kan doelmap niet aanmaken: $destDir. $_"
                             continue  # Ga door met volgende item
                         }
                     }
                     try {
                         Copy-Item -Path $item.FullName -Destination $destItemPath -Force
+                        Write-Log "Bestand gekopieerd: $($item.FullName) naar $destItemPath"
                     } catch {
-                        Write-Warning "Fout bij kopiëren van bestand: $item.FullName. $_"
+                        Write-Warning "Fout bij kopiëren van bestand: $($item.FullName). $_"
+                        Write-Log "Fout bij kopiëren van bestand: $($item.FullName). $_"
                     }
                 }
             } catch {
                 Write-Warning "Fout bij verwerken van item: $($item.FullName). $_"
+                Write-Log "Fout bij verwerken van item: $($item.FullName). $_"
             }
         }
 
         Write-Host "Kopiëren voltooid (met fouten indien aanwezig)."
+        Write-Log "Kopiëren voltooid."
     }
 }
