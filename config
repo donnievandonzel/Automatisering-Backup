@@ -1,0 +1,8 @@
+{
+  "logFile": "C:\\Users\\Administrator\\Documents\\log.txt",
+  "sourcePath": "\\\\fonteynfs.file.core.windows.net\\fileserver",
+  "destinationPath": "\\\\WIN-JPAKIKNKJ0L\\Backup\\",
+  "useRobocopy": true,
+  "robocopyOptions": "/E /Z /COPYALL /R:3 /W:5 /LOG+:\"C:\\Users\\Administrator\\Documents\\log.txt\"",
+  "dryRun": true
+}
